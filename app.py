@@ -1,5 +1,6 @@
 import logging
 import os
+import redis
 
 # Configure logging
 logging.basicConfig(
@@ -25,35 +26,32 @@ from collections import defaultdict
 import uuid
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import pkg_resources
-from flask_session import Session
-from redis import Redis
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY')
-
-# Configure Flask-Session
+app.secret_key = 'FzoY?LYL5moT:Iex"m18/0.pa!K-wG'
 app.config['SESSION_TYPE'] = 'redis'
-app.config['SESSION_PERMANENT'] = False
-app.config['SESSION_USE_SIGNER'] = True
-app.config['SESSION_KEY_PREFIX'] = 'session:'
-app.config['SESSION_COOKIE_NAME'] = 'kroulette_session'
+app.config['SESSION_REDIS'] = redis.from_url('redis://red-ctmtdsbtq21c73fc2r10:6379')
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
 
-# Configure Redis for session storage
-redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
-app.config['SESSION_REDIS'] = Redis.from_url(redis_url)
+# Configure Flask logger to use the same format
+app.logger.handlers = []
+for handler in logging.getLogger().handlers:
+    app.logger.addHandler(handler)
 
-# Initialize Flask-Session
-server_session = Session(app)
+# Log spotipy version
+spotipy_version = pkg_resources.get_distribution('spotipy').version
+app.logger.info(f"Using spotipy version: {spotipy_version}")
 
-# Initialize SocketIO
 socketio = SocketIO(app)
 
+# Configure Flask session to be more robust
+app.config['SESSION_COOKIE_SECURE'] = True  # Set to True in production with HTTPS
+
 # Spotify API credentials and settings
-CLIENT_ID = '04703f4623b846f1ae4202c56e9424ff'
-CLIENT_SECRET = 'ae11f2cacd8c403ebdaa7f221f8cd062'
+CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
+CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 SCOPE = 'user-library-read playlist-read-private playlist-read-collaborative user-read-private'
 
 # Global variables
@@ -64,7 +62,10 @@ active_rooms = {}  # Store active room info
 user_tracks = {}  # Store tracks for each session
 
 def get_redirect_uri(port=5000):
-    return f'http://127.0.0.1:{port}/callback'
+    # Check if running on Render
+    if os.environ.get('RENDER'):
+        return os.getenv('SPOTIFY_REDIRECT_URI', 'https://kroulette.onrender.com/callback')
+    return os.getenv('SPOTIFY_REDIRECT_URI', f'http://127.0.0.1:{port}/callback')
 
 def get_spotify_oauth():
     return SpotifyOAuth(
@@ -233,7 +234,7 @@ def fetch_all_tracks(session_id, access_token):
                                 'artists': [artist['name'] for artist in track['artists']],
                                 'album': track['album']['name'],
                                 'uri': track['uri'],
-                                'playlist': playlist_name  # Add playlist name to track info
+                                'playlist_name': playlist_name
                             })
                             
             except Exception as e:
@@ -384,7 +385,7 @@ def get_random_song():
     random_track_name = random_track_info['name']
     track_image_url = random_track_info.get('album', {}).get('images', [{}])[0].get('url')
     artist_name = random_track_info['artists'][0] if random_track_info['artists'] else 'Unknown Artist'
-    playlist_name = random_track_info.get('playlist', 'Unknown Playlist')
+    playlist_name = random_track_info.get('playlist_name', 'Unknown Playlist')
     
     return render_template('home.html', random_track=random_track_name, track_image_url=track_image_url, artist_name=artist_name, playlist_name=playlist_name)
 
@@ -540,37 +541,34 @@ def on_roll(data):
         
         # Get track IDs for each user
         user_track_ids = {}
-        user_track_info = {}  # Store full track info per user
+        user_track_playlists = {}
+        
         for user_id in room['users']:
             if user_id in user_tracks:
-                user_track_ids[user_id] = {track['id'] for track in user_tracks[user_id]}
-                # Create a mapping of track_id to track info for this user
-                user_track_info[user_id] = {track['id']: track for track in user_tracks[user_id]}
+                user_track_ids[user_id] = {track['id']: track for track in user_tracks[user_id]}
+                user_track_playlists[user_id] = {track['id']: track.get('playlist_name', 'Unknown Playlist') for track in user_tracks[user_id]}
                 app.logger.info(f"User {user_id} has {len(user_track_ids[user_id])} tracks")
             else:
                 app.logger.error(f"No tracks found for user {user_id}")
                 return {'error': 'Some users have not loaded their tracks yet'}
         
         # Find intersection of track IDs
-        shared_track_ids = set.intersection(*user_track_ids.values())
+        shared_track_ids = set.intersection(*[set(tracks.keys()) for tracks in user_track_ids.values()])
         app.logger.info(f"Found {len(shared_track_ids)} shared tracks")
         
-        # Get full track info for shared tracks with playlist info from both users
+        # Get full track info for shared tracks with playlist information
         shared_tracks = []
         for track_id in shared_track_ids:
-            # Get base track info from first user
-            first_user_id = list(user_track_info.keys())[0]
-            track_base = user_track_info[first_user_id][track_id].copy()
+            # Use the first user's track info as base
+            first_user_id = list(user_track_ids.keys())[0]
+            track = user_track_ids[first_user_id][track_id]
             
-            # Collect playlist names from all users
-            playlists = []
-            for user_id, track_map in user_track_info.items():
-                if track_map[track_id]['playlist']:
-                    playlists.append(f"{track_map[track_id]['playlist']}")
-            
-            # Add combined playlist info
-            track_base['playlists'] = playlists
-            shared_tracks.append(track_base)
+            # Collect playlists from all users
+            track['playlists'] = {
+                user_id: user_track_playlists[user_id][track_id] 
+                for user_id in user_track_ids.keys()
+            }
+            shared_tracks.append(track)
         
         room['shared_tracks'] = shared_tracks
         app.logger.info(f"Stored {len(shared_tracks)} shared tracks in room")
@@ -586,8 +584,14 @@ def on_roll(data):
     # Remove the track so it won't be selected again
     room['shared_tracks'].remove(track)
     
-    # Emit the track to all users in the room
-    emit('song_rolled', {'song': track}, room=room_code)
+    # Emit the track to all users in the room, including playlist information
+    emit('song_rolled', {
+        'song': {
+            'name': track['name'],
+            'artist': ', '.join(track['artists']),
+            'playlists': ', '.join(track['playlists'].values())
+        }
+    }, room=room_code)
     
     return {'success': True}
 
@@ -674,5 +678,8 @@ def get_spotify_client():
 
 if __name__ == '__main__':
     import socket
-    port = int(os.getenv('PORT', 5000))
+    
+    # Use Render's PORT environment variable if available
+    port = int(os.environ.get('PORT', 5000))
+    
     socketio.run(app, host='0.0.0.0', port=port)
