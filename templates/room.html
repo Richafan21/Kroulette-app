@@ -54,6 +54,19 @@
             background-color: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
         }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            background-color: transparent;
+        }
+        .footer hr {
+            width: max-content;
+            margin: 0 auto;
+            border-color: black;
+        }
     </style>
 </head>
 <body>
@@ -116,11 +129,12 @@
             console.log('Song rolled:', data);
             if (data.song) {
                 document.getElementById('song-name').textContent = data.song.name;
-                document.getElementById('artist-name').textContent = data.song.artists.join(', ');
-                const playlistText = data.song.playlists && data.song.playlists.length > 0 
-                    ? `Found in playlists: ${data.song.playlists.join(' and ')}` 
-                    : 'Playlist information not available';
-                document.getElementById('playlist-name').textContent = playlistText;
+                document.getElementById('artist-name').textContent = data.song.artist;
+                
+                // Display playlists
+                const playlistNameElement = document.getElementById('playlist-name');
+                playlistNameElement.innerHTML = `Playlists: ${data.song.playlists}`;
+                
                 songDisplay.style.display = 'block';
             }
         });
@@ -154,5 +168,9 @@
             socket.emit('leave_room', { room_code: roomCode });
         });
     </script>
+    <footer class="footer">
+        <hr>
+        <p>&copy; 2025 Kroulette by Richard Fan <a href="https://open.spotify.com" target="_blank"><img src="https://upload.wikimedia.org/wikipedia/commons/8/84/Spotify_icon.svg" alt="Spotify Logo" style="width: 20px; vertical-align: middle;"></a></p>
+    </footer>
 </body>
 </html>

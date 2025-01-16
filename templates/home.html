@@ -5,84 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kroulette - Home</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <style>
-        .song-info {
-            margin-bottom: 20px;
-        }
-        .song-image {
-            margin-bottom: 20px;
-        }
-        .room-options {
-            margin: 40px 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-        }
-        .join-form {
-            margin: 20px 0;
-        }
-        .or-divider {
-            margin: 20px 0;
-            color: #666;
-        }
-        .container {
-            text-align: center;
-        }
-        .album-cover {
-            width: 100px;
-            height: 100px;
-            margin: 20px;
-        }
-        .button-container {
-            margin-top: 20px;
-        }
-        .action-button {
-            padding: 10px 20px;
-            font-size: 1em;
-            margin: 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .artist-name {
-            font-size: 1.2em;
-            font-weight: bold;
-        }
-        .playlist-name {
-            font-size: 1em;
-            color: #666;
-        }
-        .error-message {
-            color: red;
-            font-size: 1em;
-        }
-        .create-room {
-            margin-bottom: 20px;
-        }
-        .join-room {
-            margin-bottom: 20px;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='additional_styles.css') }}">
 </head>
 <body>
     <header>
-        <h1>Kroulette</h1>
     </header>
-    <main>
-        <h2>Welcome!</h2>
+    <main style="display: flex; flex-direction: column; align-items: center;">
+        <h2 style="text-align: center; width: 100%;">Welcome to Kroulette!</h2>
         
-        <div class="container">
-            <div class="room-options">
-                <div class="create-room">
+        <div class="container" style="display: flex; justify-content: center; align-items: center;">
+            <div class="room-options" style="display: flex; justify-content: center; align-items: center; gap: 50px;">
+                <div class="create-room" style="text-align: center; display: flex; flex-direction: column; align-items: center;">
                     <h2>Create a Room</h2>
-                    <a href="{{ url_for('create_room') }}" class="btn">Create New Room</a>
+                    <a href="{{ url_for('create_room') }}" class="btn" style="display: inline-block;">Create New Room</a>
                 </div>
-
-                <div class="join-room">
+                <div class="join-room" style="text-align: center; display: flex; flex-direction: column; align-items: center;">
                     <h2>Join a Room</h2>
-                    <div class="join-form">
-                        <input type="text" id="room-code" placeholder="Enter Room Code" maxlength="6">
+                    <div class="join-form" style="display: flex; flex-direction: column; align-items: center;">
+                        <input type="text" id="room-code" placeholder="Enter Room Code" maxlength="6" style="width: 120px; margin-bottom: 10px;">
                         <button onclick="joinRoom()" class="btn">Join Room</button>
                     </div>
                 </div>
@@ -107,7 +47,7 @@
             </div>
         {% endif %}
 
-        <div class="logout-btn">
+        <div style="text-align: center; margin-top: 20px; width: 100%;">
             <a href="{{ url_for('logout') }}" class="btn">Log Out</a>
         </div>
     </main>
@@ -154,5 +94,24 @@
             rerollButton.textContent = 'Roll Again!';
         });
     </script>
+    <style>
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            background-color: transparent;
+        }
+        .footer hr {
+            width: max-content;
+            margin: 0 auto;
+            border-color: black;
+        }
+    </style>
+    <footer class="footer">
+        <hr>
+        <p>&copy; 2025 Kroulette by Richard Fan <a href="https://open.spotify.com" target="_blank"><img src="https://upload.wikimedia.org/wikipedia/commons/8/84/Spotify_icon.svg" alt="Spotify Logo" style="width: 20px; vertical-align: middle;"></a></p>
+    </footer>
 </body>
 </html>
