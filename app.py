@@ -29,35 +29,27 @@ from flask_session import Session
 from redis import Redis
 
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY')
+
+# Configure Flask-Session
 app.config['SESSION_TYPE'] = 'redis'
 app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_KEY_PREFIX'] = 'session:'
 app.config['SESSION_COOKIE_NAME'] = 'kroulette_session'
-app.config['SESSION_REDIS'] = Redis.from_url(os.getenv('REDIS_URL', 'redis://localhost:6379'))
-
-# Initialize the session
-Session(app)
-
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
 
-app.secret_key = os.getenv('SECRET_KEY')
+# Configure Redis for session storage
+redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+app.config['SESSION_REDIS'] = Redis.from_url(redis_url)
 
-# Configure Flask logger to use the same format
-app.logger.handlers = []
-for handler in logging.getLogger().handlers:
-    app.logger.addHandler(handler)
+# Initialize Flask-Session
+server_session = Session(app)
 
-# Log spotipy version
-spotipy_version = pkg_resources.get_distribution('spotipy').version
-app.logger.info(f"Using spotipy version: {spotipy_version}")
-
+# Initialize SocketIO
 socketio = SocketIO(app)
-
-# Configure Flask session to be more robust
-app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
 
 # Spotify API credentials and settings
 CLIENT_ID = '04703f4623b846f1ae4202c56e9424ff'
