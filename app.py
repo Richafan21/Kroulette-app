@@ -29,25 +29,12 @@ from flask_session import Session
 from redis import Redis
 
 app = Flask(__name__)
-app.config['SESSION_COOKIE_NAME'] = 'kroulette_session'
-app.secret_key = os.getenv('SECRET_KEY')
-
-# Configure Redis session
-redis_host = os.getenv('REDIS_HOST', 'localhost')  # Default to localhost for local testing
-redis_port = int(os.getenv('REDIS_PORT', 6379))
-redis_password = os.getenv('REDIS_PASSWORD', None)  # Default to None if no password is needed
-
 app.config['SESSION_TYPE'] = 'redis'
 app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_KEY_PREFIX'] = 'session:'
-app.config['SESSION_REDIS'] = Redis(
-    host=redis_host,
-    port=redis_port,
-    password=redis_password,
-    charset='utf-8',
-    decode_responses=True
-)
+app.config['SESSION_COOKIE_NAME'] = 'kroulette_session'
+app.config['SESSION_REDIS'] = Redis.from_url(os.getenv('REDIS_URL', 'redis://localhost:6379'))
 
 # Initialize the session
 Session(app)
@@ -55,6 +42,8 @@ Session(app)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
+
+app.secret_key = os.getenv('SECRET_KEY')
 
 # Configure Flask logger to use the same format
 app.logger.handlers = []
