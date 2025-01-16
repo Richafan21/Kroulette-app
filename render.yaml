@@ -5,6 +5,8 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: python app.py
     envVars:
+      - key: PORT
+        value: 10000
       - key: SPOTIPY_CLIENT_ID
         sync: false
       - key: SPOTIPY_CLIENT_SECRET
@@ -13,3 +15,9 @@ services:
         value: https://kroulette.onrender.com/callback
       - key: RENDER
         value: true
+    preDeployHook: |
+      python -m venv venv
+      . venv/bin/activate
+      pip install -r requirements.txt
+    healthCheckPath: /
+    autoDeploy: true
