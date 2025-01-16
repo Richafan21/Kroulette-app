@@ -68,15 +68,35 @@ def get_redirect_uri(port=5000):
     return os.getenv('SPOTIFY_REDIRECT_URI', f'http://127.0.0.1:{port}/callback')
 
 def get_spotify_oauth():
-    return SpotifyOAuth(
-        client_id=CLIENT_ID,
-        client_secret=CLIENT_SECRET,
-        redirect_uri=get_redirect_uri(port),
-        scope=SCOPE,
-        cache_path=None,  # Don't cache tokens to file
-        show_dialog=True,  # Always show the Spotify login dialog
-        open_browser=False
-    )
+    try:
+        # Log the environment variables for debugging
+        logging.info(f"SPOTIFY_CLIENT_ID: {os.getenv('SPOTIFY_CLIENT_ID', 'NOT SET')}")
+        logging.info(f"SPOTIFY_CLIENT_SECRET: {os.getenv('SPOTIFY_CLIENT_SECRET', 'NOT SET')}")
+        logging.info(f"SPOTIFY_REDIRECT_URI: {os.getenv('SPOTIFY_REDIRECT_URI', 'NOT SET')}")
+        
+        # Try multiple environment variable names
+        client_id = os.getenv('SPOTIFY_CLIENT_ID') or os.getenv('SPOTIPY_CLIENT_ID')
+        client_secret = os.getenv('SPOTIFY_CLIENT_SECRET') or os.getenv('SPOTIPY_CLIENT_SECRET')
+        redirect_uri = os.getenv('SPOTIFY_REDIRECT_URI') or os.getenv('SPOTIPY_REDIRECT_URI')
+        
+        # Validate credentials
+        if not client_id:
+            raise ValueError("No Spotify Client ID found in environment variables")
+        if not client_secret:
+            raise ValueError("No Spotify Client Secret found in environment variables")
+        if not redirect_uri:
+            raise ValueError("No Spotify Redirect URI found in environment variables")
+        
+        return SpotifyOAuth(
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect_uri=redirect_uri,
+            scope='user-library-read playlist-read-private user-read-private'
+        )
+    except Exception as e:
+        logging.error(f"Error in get_spotify_oauth: {str(e)}")
+        logging.error(f"Full environment: {dict(os.environ)}")
+        raise
 
 @app.route('/login')
 def login():

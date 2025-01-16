@@ -7,14 +7,24 @@ services:
     envVars:
       - key: PORT
         value: 10000
-      - key: SPOTIPY_CLIENT_ID
-        sync: false
-      - key: SPOTIPY_CLIENT_SECRET
-        sync: false
-      - key: SPOTIPY_REDIRECT_URI
-        value: https://kroulette.onrender.com/callback
       - key: RENDER
         value: true
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      - key: SPOTIFY_REDIRECT_URI
+        value: https://kroulette.onrender.com/callback
+      - key: SPOTIPY_CLIENT_ID
+        fromService:
+          name: kroulette
+          envVarKey: SPOTIFY_CLIENT_ID
+      - key: SPOTIPY_CLIENT_SECRET
+        fromService:
+          name: kroulette
+          envVarKey: SPOTIFY_CLIENT_SECRET
+      - key: SPOTIPY_REDIRECT_URI
+        value: https://kroulette.onrender.com/callback
     preDeployHook: |
       python -m venv venv
       . venv/bin/activate
