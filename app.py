@@ -91,7 +91,10 @@ def get_spotify_oauth():
             client_id=client_id,
             client_secret=client_secret,
             redirect_uri=redirect_uri,
-            scope='user-library-read playlist-read-private user-read-private'
+            scope='user-library-read playlist-read-private user-read-private',
+            cache_path=None,  # Don't cache tokens to file
+            show_dialog=True,  # Always show the Spotify login dialog
+            open_browser=False
         )
     except Exception as e:
         logging.error(f"Error in get_spotify_oauth: {str(e)}")
@@ -651,13 +654,23 @@ def on_disconnect():
 
 @app.route('/logout')
 def logout():
-    # Clear all session data
-    session.clear()
-    # Clear loading status for this session if it exists
-    session_id = session.get('session_id')
-    if session_id and session_id in loading_status:
-        del loading_status[session_id]
-    return redirect(url_for('index'))
+    try:
+        # Clear Spotify token from session
+        session.pop('spotify_token', None)
+        
+        # Clear entire Flask session
+        session.clear()
+        
+        # Optional: Remove any cached Spotify token files if they exist
+        cache_path = '.spotipyoauthcache'
+        if os.path.exists(cache_path):
+            os.remove(cache_path)
+        
+        # Redirect to home page
+        return redirect(url_for('index'))
+    except Exception as e:
+        app.logger.error(f"Error in logout: {str(e)}")
+        return redirect(url_for('index'))
 
 def refresh_token():
     """Refresh the Spotify access token"""
